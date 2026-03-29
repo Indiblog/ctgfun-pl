@@ -18,8 +18,18 @@ VIDEO_EXTENSIONS = {".mkv", ".mp4", ".avi", ".mov", ".m4v", ".ts", ".wmv", ".div
 
 SKIP_FOLDERS = {"..", ".", ""}
 
-# How many folder levels to use as category (1 = top folder only, 2 = top > sub)
-MAX_CATEGORY_DEPTH = 2
+# Category depth per top-level folder:
+# - English:   1  → group = "English"            (movies sit directly under /English/MovieFolder/)
+# - Indian:    2  → group = "Indian > Hindi Movies" / "Indian > South Indian Movies"
+# - Others:    2  → group = "Others > 4K MOVIES" / "Others > Asian Movie" etc.
+# - TV_Series: 2  → group = "TV_Series > ShowName"
+CATEGORY_DEPTH_MAP = {
+    "English":   1,
+    "Indian":    2,
+    "Others":    2,
+    "TV_Series": 2,
+}
+MAX_CATEGORY_DEPTH = 2  # fallback for unknown top-level folders
 
 SESSION = requests.Session()
 SESSION.headers.update({
@@ -66,7 +76,10 @@ def crawl(url, depth=0, category_parts=None):
             if folder_name in SKIP_FOLDERS:
                 continue
 
-            new_parts = (category_parts + [folder_name]) if depth < MAX_CATEGORY_DEPTH else category_parts
+            # Use per-folder depth so each top-level category gets the right grouping level
+            top_folder = category_parts[0] if category_parts else folder_name
+            max_depth = CATEGORY_DEPTH_MAP.get(top_folder, MAX_CATEGORY_DEPTH)
+            new_parts = (category_parts + [folder_name]) if depth < max_depth else category_parts
             print(f"{'  ' * depth}📁 {folder_name}")
             results.extend(crawl(full_url, depth + 1, new_parts))
 
